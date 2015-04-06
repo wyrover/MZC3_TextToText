@@ -6,38 +6,63 @@
 ///////////////////////////////////////////////////////////////////////////////
 // MAnsiToWide
 
-MZC_INLINE MAnsiToWide::MAnsiToWide() : m_wide(_wcsdup(L""))
+MZC_INLINE MAnsiToWide::MAnsiToWide() : m_wide(_wcsdup(L"")), m_size(0)
 {
 }
 
-MZC_INLINE MAnsiToWide::MAnsiToWide(const char *ansi) : m_wide(NULL)
+MZC_INLINE MAnsiToWide::MAnsiToWide(const char *ansi) : m_wide(NULL), m_size(0)
 {
     assert(ansi);
     #ifdef _WIN32
         const int len = ::MultiByteToWideChar(CP_ACP, 0, ansi, -1, NULL, 0);
-        assert(len);
         const size_t siz = len * sizeof(wchar_t);
         wchar_t *psz = reinterpret_cast<wchar_t *>(malloc(siz));
-        if (psz)
-        {
+        if (psz) {
             ::MultiByteToWideChar(CP_ACP, 0, ansi, -1, psz, len);
             m_wide = psz;
+            m_size = len;
         }
     #else
         std::mbstate_t mb;
         const int len = 1 + std::mbsrtowcs(NULL, &ansi, 0, &mb);
         const size_t siz = len * sizeof(wchar_t);
         wchar_t *psz = reinterpret_cast<wchar_t *>(malloc(siz));
-        if (psz)
-        {
+        if (psz) {
             std::mbsrtowcs(psz, &ansi, len, &mb);
             m_wide = psz;
+            m_size = len;
+        }
+    #endif
+}
+
+MZC_INLINE MAnsiToWide::MAnsiToWide(const char *ansi, int count) :
+    m_wide(NULL), m_size(0)
+{
+    assert(ansi);
+    #ifdef _WIN32
+        const int len = ::MultiByteToWideChar(CP_ACP, 0, ansi, count, NULL, 0);
+        const size_t siz = len * sizeof(wchar_t);
+        wchar_t *psz = reinterpret_cast<wchar_t *>(malloc(siz));
+        if (psz) {
+            ::MultiByteToWideChar(CP_ACP, 0, ansi, count, psz, len);
+            m_wide = psz;
+            m_size = len;
+        }
+    #else
+        std::mbstate_t mb;
+        const int len = 1 + std::mbsrtowcs(NULL, &ansi, count, &mb);
+        const size_t siz = len * sizeof(wchar_t);
+        wchar_t *psz = reinterpret_cast<wchar_t *>(malloc(siz));
+        if (psz) {
+            std::mbsrtowcs(psz, &ansi, len, &mb);
+            m_wide = psz;
+            m_size = len;
         }
     #endif
 }
 
 MZC_INLINE MAnsiToWide::MAnsiToWide(const MAnsiToWide& a2w) :
-    m_wide(_wcsdup(a2w.m_wide))
+    m_wide(_wcsdup(a2w.m_wide)), m_size(a2w.m_size)
 {
 }
 
@@ -45,6 +70,7 @@ MZC_INLINE MAnsiToWide& MAnsiToWide::operator=(const MAnsiToWide& a2w)
 {
     free(m_wide);
     m_wide = _wcsdup(a2w.m_wide);
+    m_size = a2w.m_size;
     return *this;
 }
 
@@ -52,12 +78,14 @@ MZC_INLINE MAnsiToWide& MAnsiToWide::operator=(const MAnsiToWide& a2w)
     MZC_INLINE MAnsiToWide::MAnsiToWide(MAnsiToWide&& a2w) : m_wide(a2w.m_wide)
     {
         a2w.m_wide = NULL;
+        m_size = 0;
     }
 
     MZC_INLINE MAnsiToWide& MAnsiToWide::operator=(MAnsiToWide&& a2w)
     {
         m_wide = a2w.m_wide;
         a2w.m_wide = NULL;
+        m_size = 0;
         return *this;
     }
 #endif
@@ -74,10 +102,15 @@ MZC_INLINE bool MAnsiToWide::empty() const
 
 MZC_INLINE size_t MAnsiToWide::size() const
 {
-    return wcslen(m_wide);
+    return m_size;
 }
 
 MZC_INLINE const wchar_t *MAnsiToWide::c_str() const
+{
+    return m_wide;
+}
+
+MZC_INLINE const wchar_t *MAnsiToWide::data() const
 {
     return m_wide;
 }
@@ -90,46 +123,74 @@ MZC_INLINE MAnsiToWide::operator const wchar_t *() const
 ///////////////////////////////////////////////////////////////////////////////
 // MWideToAnsi
 
-MZC_INLINE MWideToAnsi::MWideToAnsi() : m_ansi(strdup(""))
+MZC_INLINE MWideToAnsi::MWideToAnsi() : m_ansi(_strdup("")), m_size(0)
 {
 }
 
-MZC_INLINE MWideToAnsi::MWideToAnsi(const wchar_t *wide) : m_ansi(NULL)
+MZC_INLINE MWideToAnsi::MWideToAnsi(const wchar_t *wide) :
+    m_ansi(NULL), m_size(0)
 {
     assert(wide);
     #ifdef _WIN32
         const int len =
             ::WideCharToMultiByte(CP_ACP, 0, wide, -1, NULL, 0, NULL, NULL);
-        assert(len);
         const size_t siz = len * sizeof(char);
         char *psz = reinterpret_cast<char *>(malloc(siz));
-        if (psz)
-        {
+        if (psz) {
             ::WideCharToMultiByte(CP_ACP, 0, wide, -1, psz, len, NULL, NULL);
             m_ansi = psz;
+            m_size = len;
         }
     #else
         std::mbstate_t mb;
         const int len = 1 + std::wcsrtombs(NULL, &wide, 0, &mb);
         const size_t siz = len * sizeof(char);
         char *psz = reinterpret_cast<char *>(malloc(siz));
-        if (psz)
-        {
+        if (psz) {
             std::wcsrtombs(psz, &wide, len, &mb);
             m_ansi = psz;
+            m_size = len;
+        }
+    #endif
+}
+
+MZC_INLINE MWideToAnsi::MWideToAnsi(const wchar_t *wide, int count) :
+    m_ansi(NULL), m_size(0)
+{
+    assert(wide);
+    #ifdef _WIN32
+        const int len =
+            ::WideCharToMultiByte(CP_ACP, 0, wide, count, NULL, 0, NULL, NULL);
+        const size_t siz = len * sizeof(char);
+        char *psz = reinterpret_cast<char *>(malloc(siz));
+        if (psz) {
+            ::WideCharToMultiByte(CP_ACP, 0, wide, count, psz, len, NULL, NULL);
+            m_ansi = psz;
+            m_size = len;
+        }
+    #else
+        std::mbstate_t mb;
+        const int len = 1 + std::wcsrtombs(NULL, &wide, count, &mb);
+        const size_t siz = len * sizeof(char);
+        char *psz = reinterpret_cast<char *>(malloc(siz));
+        if (psz) {
+            std::wcsrtombs(psz, &wide, len, &mb);
+            m_ansi = psz;
+            m_size = len;
         }
     #endif
 }
 
 MZC_INLINE MWideToAnsi::MWideToAnsi(const MWideToAnsi& w2a) :
-    m_ansi(strdup(w2a.m_ansi))
+    m_ansi(_strdup(w2a.m_ansi)), m_size(w2a.m_size)
 {
 }
 
 MZC_INLINE MWideToAnsi& MWideToAnsi::operator=(const MWideToAnsi& w2a)
 {
     free(m_ansi);
-    m_ansi = strdup(w2a.m_ansi);
+    m_ansi = _strdup(w2a.m_ansi);
+    m_size = w2a.m_size;
     return *this;
 }
 
@@ -137,12 +198,14 @@ MZC_INLINE MWideToAnsi& MWideToAnsi::operator=(const MWideToAnsi& w2a)
     MZC_INLINE MWideToAnsi::MWideToAnsi(MWideToAnsi&& w2a) : m_ansi(w2a.m_ansi)
     {
         w2a.m_ansi = NULL;
+        w2a.m_size = 0;
     }
 
     MZC_INLINE MWideToAnsi& MWideToAnsi::operator=(MWideToAnsi&& w2a)
     {
         m_ansi = w2a.m_ansi;
         w2a.m_ansi = NULL;
+        w2a.m_size = 0;
         return *this;
     }
 #endif
@@ -159,10 +222,15 @@ MZC_INLINE bool MWideToAnsi::empty() const
 
 MZC_INLINE size_t MWideToAnsi::size() const
 {
-    return strlen(m_ansi);
+    return m_size;
 }
 
 MZC_INLINE const char *MWideToAnsi::c_str() const
+{
+    return m_ansi;
+}
+
+MZC_INLINE const char *MWideToAnsi::data() const
 {
     return m_ansi;
 }
@@ -189,8 +257,7 @@ MZC_INLINE MUtf8ToWide::MUtf8ToWide(const char *utf8) : m_wide(NULL)
     assert(len);
     const size_t siz = len * sizeof(wchar_t);
     wchar_t *psz = reinterpret_cast<wchar_t *>(malloc(siz));
-    if (psz)
-    {
+    if (psz) {
         ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, psz, len);
         m_wide = psz;
     }
@@ -242,6 +309,11 @@ MZC_INLINE const wchar_t *MUtf8ToWide::c_str() const
     return m_wide;
 }
 
+MZC_INLINE const wchar_t *MUtf8ToWide::data() const
+{
+    return m_wide;
+}
+
 MZC_INLINE MUtf8ToWide::operator const wchar_t *() const
 {
     return m_wide;
@@ -250,7 +322,7 @@ MZC_INLINE MUtf8ToWide::operator const wchar_t *() const
 ///////////////////////////////////////////////////////////////////////////////
 // MWideToUtf8
 
-MZC_INLINE MWideToUtf8::MWideToUtf8() : m_utf8(strdup(""))
+MZC_INLINE MWideToUtf8::MWideToUtf8() : m_utf8(_strdup(""))
 {
 }
 
@@ -265,22 +337,21 @@ MZC_INLINE MWideToUtf8::MWideToUtf8(const wchar_t *wide) : m_utf8(NULL)
     assert(len);
     const size_t siz = len * sizeof(char);
     char *psz = reinterpret_cast<char *>(malloc(siz));
-    if (psz)
-    {
+    if (psz) {
         ::WideCharToMultiByte(CP_UTF8, 0, wide, -1, psz, len, NULL, NULL);
         m_utf8 = psz;
     }
 }
 
 MZC_INLINE MWideToUtf8::MWideToUtf8(const MWideToUtf8& w2u) :
-    m_utf8(strdup(w2u.m_utf8))
+    m_utf8(_strdup(w2u.m_utf8))
 {
 }
 
 MZC_INLINE MWideToUtf8& MWideToUtf8::operator=(const MWideToUtf8& w2u)
 {
     free(m_utf8);
-    m_utf8 = strdup(w2u.m_utf8);
+    m_utf8 = _strdup(w2u.m_utf8);
     return *this;
 }
 
@@ -314,6 +385,11 @@ MZC_INLINE size_t MWideToUtf8::size() const
 }
 
 MZC_INLINE const char *MWideToUtf8::c_str() const
+{
+    return m_utf8;
+}
+
+MZC_INLINE const char *MWideToUtf8::data() const
 {
     return m_utf8;
 }

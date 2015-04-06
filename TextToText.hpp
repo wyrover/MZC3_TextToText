@@ -14,6 +14,7 @@ class MAnsiToWide EXTENDS_MOBJECT
 public:
     MAnsiToWide();
     MAnsiToWide(const char *ansi);
+    MAnsiToWide(const char *ansi, int count);
     MAnsiToWide(const MAnsiToWide& a2w);
     MAnsiToWide& operator=(const MAnsiToWide& a2w);
     #ifdef MODERN_CXX
@@ -24,11 +25,13 @@ public:
 
     bool empty() const;
     size_t size() const;
+    const wchar_t *data() const;
     const wchar_t *c_str() const;
     operator const wchar_t *() const;
 
 protected:
     wchar_t *m_wide;
+    size_t m_size;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,6 +42,7 @@ class MWideToAnsi EXTENDS_MOBJECT
 public:
     MWideToAnsi();
     MWideToAnsi(const wchar_t *wide);
+    MWideToAnsi(const wchar_t *wide, int count);
     MWideToAnsi(const MWideToAnsi& w2a);
     MWideToAnsi& operator=(const MWideToAnsi& w2a);
     #ifdef MODERN_CXX
@@ -49,11 +53,13 @@ public:
 
     bool empty() const;
     size_t size() const;
+    const char *data() const;
     const char *c_str() const;
     operator const char *() const;
 
 protected:
     char *m_ansi;
+    size_t m_size;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,6 +80,7 @@ public:
 
     bool empty() const;
     size_t size() const;
+    const wchar_t *data() const;
     const wchar_t *c_str() const;
     operator const wchar_t *() const;
 
@@ -99,6 +106,7 @@ public:
 
     bool empty() const;
     size_t size() const;
+    const char *data() const;
     const char *c_str() const;
     operator const char *() const;
 
